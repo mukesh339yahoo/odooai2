@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'AI Chat-to-Report & Dashboard Assistant',
-    'version': '18.0.1.0.0',
+    'version': '20.0.1.0.0',
     'category': 'Productivity/Dashboard',
     'summary': 'The High-Ticket Modernizer: Natural Language query bar to generate reports, charts, and pivot tables using AI.',
     'description': """
-        AI Chat-to-Report & Dashboard Assistant
-        =======================================
+        AI Chat-to-Report & Dashboard Assistant (Odoo 20 Compatible)
+        ============================================================
         Unlock your Odoo data with plain English queries.
         This module allows users to generate complex charts and reports instantly 
         using LLMs (OpenAI, Gemini, Anthropic) and pin them to their dashboards.
+        Fully updated and enhanced for Odoo 20 with native OWL components and robust ORM query generation.
     """,
     'author': 'Ridhira Technologies , Pune , India',
     'website': 'https://ridhira.desigoogly.com',
@@ -18,6 +19,7 @@
     'data': [
         'security/ir.model.access.csv',
         'views/res_config_settings_views.xml',
+        'views/ai_report_query_views.xml',
         'views/ai_report_actions.xml',
     ],
     'assets': {
@@ -32,3 +34,4 @@
     'application': True,
     'auto_install': False,
 }
+

@@ -5,6 +5,10 @@
         <field name="tag">ridhira_ai_chat_report.ai_query_bar</field>
     </record>
 
-    <menuitem id="menu_ai_chat_report_root" name="AI Analyst" sequence="10"/>
-    <menuitem id="menu_ai_chat_report_dashboard" name="Dashboard" parent="menu_ai_chat_report_root" action="action_ai_chat_report" sequence="10"/>
+    <menuitem id="menu_ai_chat_report_root" name="AI Analyst" web_icon="ridhira_ai_chat_report,static/description/icon.png" sequence="10"/>
+    <menuitem id="menu_ai_chat_report_dashboard" name="AI Assistant Hub" parent="menu_ai_chat_report_root" action="action_ai_chat_report" sequence="10"/>
+    <menuitem id="menu_ai_chat_report_history" name="Query History" parent="menu_ai_chat_report_root" action="action_ai_report_query_history" sequence="20"/>
+
+    <menuitem id="menu_ai_chat_report_config" name="Configuration" parent="menu_ai_chat_report_root" sequence="90" groups="base.group_system"/>
+    <menuitem id="menu_ai_chat_report_settings" name="Settings" parent="menu_ai_chat_report_config" action="action_ai_chat_report_config_settings" sequence="10"/>
 </odoo>
