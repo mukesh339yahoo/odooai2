@@ -8,27 +8,17 @@
         <field name="arch" type="xml">
             <xpath expr="//form" position="inside">
                 <app data-string="AI Chat Report" string="AI Chat Report" name="ridhira_ai_chat_report" groups="base.group_system">
-                    <block title="AI Provider Settings" name="ai_provider_settings">
-                        <setting string="LLM Provider" help="Select the AI provider for generating reports">
+                    <block title="AI Engine &amp; Provider Configuration" name="ai_provider_settings">
+                        <setting string="AI Provider" help="Select which AI engine powers natural language reports">
                             <field name="ridhira_llm_provider" widget="radio"/>
                         </setting>
-                        <setting string="OpenAI Configuration" help="Configure OpenAI API Key and Model" invisible="ridhira_llm_provider != 'openai'">
-                            <div class="content-group">
-                                <div class="row mt-2">
-                                    <label for="ridhira_openai_api_key" class="col-lg-3 o_light_label"/>
-                                    <field name="ridhira_openai_api_key" password="True"/>
-                                </div>
-                                <div class="row mt-2">
-                                    <label for="ridhira_openai_model" class="col-lg-3 o_light_label"/>
-                                    <field name="ridhira_openai_model"/>
-                                </div>
-                            </div>
-                        </setting>
-                        <setting string="Google Gemini Configuration" help="Configure Gemini API Key and Model" invisible="ridhira_llm_provider != 'gemini'">
+
+                        <!-- Google Gemini -->
+                        <setting string="Google Gemini Configuration" help="Fast inference and generous free tier" invisible="ridhira_llm_provider != 'gemini'">
                             <div class="content-group">
                                 <div class="row mt-2">
                                     <label for="ridhira_gemini_api_key" class="col-lg-3 o_light_label"/>
-                                    <field name="ridhira_gemini_api_key" password="True"/>
+                                    <field name="ridhira_gemini_api_key" password="True" placeholder="AIzaSy..."/>
                                 </div>
                                 <div class="row mt-2">
                                     <label for="ridhira_gemini_model" class="col-lg-3 o_light_label"/>
@@ -36,17 +26,88 @@
                                 </div>
                             </div>
                         </setting>
-                        <setting string="Anthropic Configuration" help="Configure Anthropic API Key and Model" invisible="ridhira_llm_provider != 'anthropic'">
+
+                        <!-- OpenAI -->
+                        <setting string="OpenAI Configuration" help="Leading reasoning models from OpenAI" invisible="ridhira_llm_provider != 'openai'">
+                            <div class="content-group">
+                                <div class="row mt-2">
+                                    <label for="ridhira_openai_api_key" class="col-lg-3 o_light_label"/>
+                                    <field name="ridhira_openai_api_key" password="True" placeholder="sk-..."/>
+                                </div>
+                                <div class="row mt-2">
+                                    <label for="ridhira_openai_model" class="col-lg-3 o_light_label"/>
+                                    <field name="ridhira_openai_model"/>
+                                </div>
+                            </div>
+                        </setting>
+
+                        <!-- Anthropic -->
+                        <setting string="Anthropic Claude Configuration" help="State of the art intelligence with Claude 3.5" invisible="ridhira_llm_provider != 'anthropic'">
                             <div class="content-group">
                                 <div class="row mt-2">
                                     <label for="ridhira_anthropic_api_key" class="col-lg-3 o_light_label"/>
-                                    <field name="ridhira_anthropic_api_key" password="True"/>
+                                    <field name="ridhira_anthropic_api_key" password="True" placeholder="sk-ant-..."/>
                                 </div>
                                 <div class="row mt-2">
                                     <label for="ridhira_anthropic_model" class="col-lg-3 o_light_label"/>
                                     <field name="ridhira_anthropic_model"/>
                                 </div>
                             </div>
+                        </setting>
+
+                        <!-- Groq -->
+                        <setting string="Groq Ultra-Fast Inference" help="High-speed inference on LPU chips (sub-second queries)" invisible="ridhira_llm_provider != 'groq'">
+                            <div class="content-group">
+                                <div class="row mt-2">
+                                    <label for="ridhira_groq_api_key" class="col-lg-3 o_light_label"/>
+                                    <field name="ridhira_groq_api_key" password="True" placeholder="gsk_..."/>
+                                </div>
+                                <div class="row mt-2">
+                                    <label for="ridhira_groq_model" class="col-lg-3 o_light_label"/>
+                                    <field name="ridhira_groq_model"/>
+                                </div>
+                            </div>
+                        </setting>
+
+                        <!-- Ollama Local -->
+                        <setting string="Ollama (Local / On-Premise)" help="100% private, on-premise execution with no external API calls" invisible="ridhira_llm_provider != 'ollama'">
+                            <div class="content-group">
+                                <div class="row mt-2">
+                                    <label for="ridhira_ollama_endpoint" class="col-lg-3 o_light_label"/>
+                                    <field name="ridhira_ollama_endpoint" placeholder="http://localhost:11434"/>
+                                </div>
+                                <div class="row mt-2">
+                                    <label for="ridhira_ollama_model" class="col-lg-3 o_light_label"/>
+                                    <field name="ridhira_ollama_model" placeholder="llama3.2"/>
+                                </div>
+                            </div>
+                        </setting>
+
+                        <!-- Custom Endpoint -->
+                        <setting string="Custom OpenAI-Compatible Endpoint" help="Connect to DeepSeek, OpenRouter, vLLM, Azure, etc." invisible="ridhira_llm_provider != 'custom'">
+                            <div class="content-group">
+                                <div class="row mt-2">
+                                    <label for="ridhira_custom_endpoint" class="col-lg-3 o_light_label"/>
+                                    <field name="ridhira_custom_endpoint" placeholder="https://api.deepseek.com/v1"/>
+                                </div>
+                                <div class="row mt-2">
+                                    <label for="ridhira_custom_api_key" class="col-lg-3 o_light_label"/>
+                                    <field name="ridhira_custom_api_key" password="True"/>
+                                </div>
+                                <div class="row mt-2">
+                                    <label for="ridhira_custom_model" class="col-lg-3 o_light_label"/>
+                                    <field name="ridhira_custom_model" placeholder="deepseek-chat"/>
+                                </div>
+                            </div>
+                        </setting>
+                    </block>
+
+                    <block title="Advanced Features" name="ai_advanced_features">
+                        <setting string="Executive AI Insights" help="Automatically generate key business takeaways and trends alongside visual reports">
+                            <field name="ridhira_enable_ai_insights"/>
+                        </setting>
+                        <setting string="Voice Speech-to-Text" help="Allow dictating query prompts using microphone directly in the UI">
+                            <field name="ridhira_enable_voice_input"/>
                         </setting>
                     </block>
                 </app>

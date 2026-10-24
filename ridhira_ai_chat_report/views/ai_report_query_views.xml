@@ -6,10 +6,17 @@
         <field name="model">ai.report.query</field>
         <field name="arch" type="xml">
             <list string="AI Query History">
+                <field name="is_favorite" widget="boolean_favorite" nolabel="1"/>
                 <field name="create_date" string="Date"/>
                 <field name="name" string="Query"/>
-                <field name="model_name" string="Target Model"/>
-                <field name="chart_type" widget="badge" decoration-info="chart_type == 'bar'" decoration-success="chart_type == 'pie'" decoration-warning="chart_type == 'line'" decoration-primary="chart_type == 'pivot'"/>
+                <field name="model_name" string="Model"/>
+                <field name="chart_type" widget="badge" 
+                       decoration-info="chart_type == 'bar'" 
+                       decoration-success="chart_type == 'pie'" 
+                       decoration-warning="chart_type == 'line'" 
+                       decoration-primary="chart_type == 'pivot'"
+                       decoration-danger="chart_type == 'stacked_bar'"/>
+                <field name="measure" string="Metric"/>
                 <field name="user_id" widget="many2one_avatar_user"/>
                 <button name="action_open_report" string="View Report" type="object" icon="fa-area-chart" class="btn btn-sm btn-primary"/>
             </list>
@@ -26,12 +33,27 @@
                     <button name="action_open_report" string="Launch Report / Chart" type="object" class="btn btn-primary" icon="fa-play"/>
                 </header>
                 <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_toggle_favorite" type="object" class="oe_stat_button" icon="fa-star">
+                            <field name="is_favorite" widget="boolean_favorite"/>
+                        </button>
+                    </div>
                     <div class="oe_title">
                         <label for="name" string="Query Title"/>
                         <h1>
                             <field name="name" placeholder="e.g. Sales by Partner in Bar Chart"/>
                         </h1>
                     </div>
+
+                    <!-- Executive AI Insight Banner -->
+                    <div class="alert alert-info d-flex align-items-start rounded-3 p-3 mb-4" invisible="not ai_insight">
+                        <i class="fa fa-lightbulb-o fa-2x text-primary me-3 mt-1"/>
+                        <div>
+                            <h6 class="fw-bold mb-1 text-primary">Executive AI Insights &amp; Strategic Takeaway</h6>
+                            <field name="ai_insight" class="mb-0"/>
+                        </div>
+                    </div>
+
                     <group>
                         <group string="Query Context">
                             <field name="user_prompt"/>
@@ -39,8 +61,9 @@
                             <field name="chart_type"/>
                             <field name="measure"/>
                         </group>
-                        <group string="User &amp; Execution">
+                        <group string="User &amp; Organization">
                             <field name="user_id"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
                             <field name="create_date"/>
                         </group>
                     </group>
@@ -51,6 +74,9 @@
                                 <field name="groupby"/>
                                 <field name="fields_list"/>
                             </group>
+                        </page>
+                        <page string="Conversation History" name="conversation_history" invisible="not history_json">
+                            <field name="history_json" widget="ace" options="{'mode': 'json'}" readonly="1"/>
                         </page>
                     </notebook>
                 </sheet>
@@ -67,9 +93,11 @@
                 <field name="name" string="Query"/>
                 <field name="model_name" string="Model"/>
                 <field name="user_id"/>
+                <filter name="favorites" string="Starred Favorites" domain="[('is_favorite', '=', True)]"/>
                 <filter name="my_queries" string="My Queries" domain="[('user_id', '=', uid)]"/>
                 <separator/>
                 <filter name="type_bar" string="Bar Charts" domain="[('chart_type', '=', 'bar')]"/>
+                <filter name="type_stacked" string="Stacked Bar" domain="[('chart_type', '=', 'stacked_bar')]"/>
                 <filter name="type_pie" string="Pie Charts" domain="[('chart_type', '=', 'pie')]"/>
                 <filter name="type_line" string="Line Charts" domain="[('chart_type', '=', 'line')]"/>
                 <filter name="type_pivot" string="Pivot Tables" domain="[('chart_type', '=', 'pivot')]"/>
@@ -84,7 +112,7 @@
 
     <!-- Window Action for History -->
     <record id="action_ai_report_query_history" model="ir.actions.act_window">
-        <field name="name">Query History</field>
+        <field name="name">Query History &amp; Favorites</field>
         <field name="res_model">ai.report.query</field>
         <field name="view_mode">list,form</field>
         <field name="search_view_id" ref="view_ai_report_query_search"/>

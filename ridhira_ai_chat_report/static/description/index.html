@@ -3,35 +3,64 @@
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>AI Chat-to-Report & Dashboard Assistant</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <title>AI Chat-to-Report &amp; Dashboard Assistant - Odoo 20</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary: #714B67;
+            --secondary: #017E84;
+            --accent: #FF8F00;
+            --dark: #0f172a;
+            --light: #f8fafc;
+            --border: #e2e8f0;
+        }
         body {
-            font-family: 'Inter', sans-serif;
-            color: #333;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: #334155;
             line-height: 1.6;
             margin: 0;
             padding: 0;
-            background-color: #f9f9f9;
+            background-color: var(--light);
         }
         .header {
-            background: linear-gradient(135deg, #017E84, #875A7B);
+            background: linear-gradient(135deg, #714B67 0%, #017E84 100%);
             color: white;
             text-align: center;
-            padding: 40px 20px;
+            padding: 60px 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        .badge-hero {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(8px);
+            padding: 6px 18px;
+            border-radius: 50px;
+            font-size: 0.85em;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            font-weight: 700;
+            display: inline-block;
+            margin-bottom: 15px;
         }
         .header h1 {
             margin: 0;
-            font-size: 2.5em;
+            font-size: 2.8em;
+            font-weight: 800;
+            letter-spacing: -0.02em;
         }
         .header h2 {
-            font-weight: 300;
+            font-weight: 400;
+            font-size: 1.3em;
             margin-top: 10px;
+            opacity: 0.95;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
         }
         .company-info {
             text-align: center;
-            margin-top: 20px;
-            font-size: 1.2em;
+            margin-top: 25px;
+            font-size: 1.1em;
             color: #fff;
         }
         .company-info a {
@@ -40,93 +69,264 @@
             font-weight: bold;
         }
         .container {
-            max-width: 1000px;
+            max-width: 1080px;
             margin: 40px auto;
             padding: 0 20px;
         }
+        .grid-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        .stat-card {
+            background: white;
+            padding: 24px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+            text-align: center;
+        }
+        .stat-card .icon {
+            font-size: 2.2em;
+            margin-bottom: 10px;
+            display: inline-block;
+        }
+        .stat-card h4 {
+            margin: 0 0 8px 0;
+            color: var(--primary);
+            font-size: 1.2em;
+            font-weight: 700;
+        }
+        .stat-card p {
+            margin: 0;
+            font-size: 0.9em;
+            color: #64748b;
+        }
         .feature-box {
             background: #fff;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            padding: 30px;
-            margin-bottom: 30px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            box-shadow: 0 6px 25px rgba(0,0,0,0.04);
+            padding: 40px;
+            margin-bottom: 35px;
         }
         .feature-box h3 {
-            color: #875A7B;
+            color: var(--primary);
             font-size: 1.8em;
+            font-weight: 700;
             margin-top: 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
         .screenshot {
             text-align: center;
-            margin-top: 20px;
+            margin: 25px 0;
         }
         .screenshot img {
             max-width: 100%;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+        }
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .comparison-table th, .comparison-table td {
+            padding: 14px 18px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        .comparison-table th {
+            background: #f1f5f9;
+            color: var(--dark);
+            font-weight: 700;
+        }
+        .comparison-table tr:hover {
+            background: #f8fafc;
+        }
+        .tag-yes {
+            color: #059669;
+            font-weight: 700;
+        }
+        .tag-no {
+            color: #dc2626;
+            font-weight: 600;
+        }
+        .tag-best {
+            background: linear-gradient(135deg, #714B67, #017E84);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 0.8em;
+            font-weight: 700;
+        }
+        .provider-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .provider-badge {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            padding: 8px 16px;
             border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-        }
-        .benefits-list {
-            list-style: none;
-            padding: 0;
-        }
-        .benefits-list li {
-            margin-bottom: 10px;
-            padding-left: 25px;
-            position: relative;
-        }
-        .benefits-list li:before {
-            content: '✓';
-            position: absolute;
-            left: 0;
-            color: #017E84;
-            font-weight: bold;
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #334155;
         }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <h1>AI Chat-to-Report & Dashboard Assistant</h1>
-        <h2>The High-Ticket Modernizer for Odoo 20</h2>
+        <span class="badge-hero">🚀 The #1 AI Analytics App for Odoo 20</span>
+        <h1>AI Chat-to-Report &amp; Dashboard Assistant</h1>
+        <h2>Voice-Powered Natural Language Analytics, Multi-LLM Intelligence (Gemini, OpenAI, Claude, Groq, Ollama), &amp; Executive Business Takeaways</h2>
         <div class="company-info">
-            Created by <strong>Ridhira Technologies, AI First company</strong><br/>
+            Created by <strong>Ridhira Technologies, AI First Company</strong><br/>
             Website: <a href="https://ridhira.desigoogly.com/" target="_blank">https://ridhira.desigoogly.com/</a>
         </div>
     </div>
 
     <div class="container">
+        
+        <!-- Standout Stats & Value Props -->
+        <div class="grid-cards">
+            <div class="stat-card">
+                <span class="icon">🎙️</span>
+                <h4>Voice-to-Report</h4>
+                <p>Dictate report requests using speech-to-text directly in the Odoo navbar.</p>
+            </div>
+            <div class="stat-card">
+                <span class="icon">⚡</span>
+                <h4>Multi-LLM Freedom</h4>
+                <p>Connect Gemini 2.0, GPT-4o, Claude 3.5, Groq, or 100% private local Ollama.</p>
+            </div>
+            <div class="stat-card">
+                <span class="icon">💡</span>
+                <h4>Executive Insights</h4>
+                <p>Generates actionable executive takeaways &amp; business observations with every chart.</p>
+            </div>
+            <div class="stat-card">
+                <span class="icon">🔄</span>
+                <h4>Conversational Refine</h4>
+                <p>Iteratively tweak reports with follow-ups ("make it a line chart", "filter won").</p>
+            </div>
+        </div>
+
+        <!-- Section 1: The Core Solution -->
         <div class="feature-box">
-            <h3>Unlock Your Data with Plain English</h3>
+            <h3><span>🗣️</span> Speak or Type: Real-Time BI in Plain English</h3>
             <p>
-                Stop struggling with complex filters and "Group By" rules. Our powerful Natural Language query bar seamlessly integrates into your Odoo backend. Simply type what you want to see, and watch the AI instantly build the perfect report.
+                Eliminate complex filters, search domains, and manual pivot configurations. Simply speak into your microphone or type what you need. The AI translates your prompt into precise Odoo ORM actions, automatically opening charts (Bar, Stacked Bar, Pie, Line) or native Pivot tables in under a second.
             </p>
             <div class="screenshot">
                 <img src="ai_query_bar.png" alt="AI Chat Widget Interface"/>
-                <p><em>Sleek, global floating AI Chat Widget accessible from anywhere in Odoo.</em></p>
+                <p><em>Sleek floating AI Analyst accessible from anywhere in Odoo with Voice Input and Suggestion Chips.</em></p>
             </div>
         </div>
 
+        <!-- Section 2: Executive Takeaways & Insights -->
         <div class="feature-box">
-            <h3>Instant Beautiful Dashboards</h3>
+            <h3><span>📈</span> Beyond Data: Executive AI Insights &amp; Strategic Advice</h3>
             <p>
-                Once the AI generates your report, it renders a stunning chart (Bar, Pie, Line) or a Pivot Table. You can easily pin these dynamic charts directly to your native Odoo Dashboards, allowing executives to build customized, real-time KPI overviews in seconds.
+                Competitor apps just dump numbers on a screen. Ridhira AI Analyst includes an <strong>Executive Intelligence Layer</strong> that analyzes the generated query and delivers high-level bulleted takeaways explaining trends, anomalies, and tactical next steps for managers.
             </p>
             <div class="screenshot">
                 <img src="ai_chart_dashboard.png" alt="AI Generated Dashboard"/>
-                <p><em>Premium charting and native dashboard integration.</em></p>
+                <p><em>Interactive charts, drill-downs, and instant dashboard pinning for executives.</em></p>
             </div>
         </div>
 
+        <!-- Section 3: Multi-LLM Provider Support -->
         <div class="feature-box">
-            <h3>Key Features</h3>
-            <ul class="benefits-list">
-                <li><strong>Odoo 20 Compatible:</strong> Built with modern OWL components, Systray widget, and dedicated AI Assistant Workspace.</li>
-                <li><strong>Multiple AI Providers:</strong> Fully compatible with OpenAI (GPT-4o), Google Gemini (2.0 Flash / 1.5 Pro), and Anthropic (Claude 3.5 Sonnet).</li>
-                <li><strong>Privacy First:</strong> Securely translates queries into Odoo ORM logic locally—your raw business data never leaves your server.</li>
-                <li><strong>Respects Access Rights:</strong> Automatically inherits Odoo's robust row-level security. Employees can only query data they have permission to see.</li>
-                <li><strong>Query History &amp; Re-run:</strong> Save, review, and re-launch past AI report queries anytime.</li>
-            </ul>
+            <h3><span>🔌</span> 6 Enterprise LLM Integrations (Cloud &amp; On-Premise)</h3>
+            <p>
+                Never get locked into a single AI provider or monthly subscription fee. Choose the best provider for your budget, speed, and privacy requirements:
+            </p>
+            <div class="provider-badges">
+                <div class="provider-badge">🌟 Google Gemini (2.0 Flash / 1.5 Pro)</div>
+                <div class="provider-badge">🧠 OpenAI (GPT-4o / GPT-4o Mini / o1)</div>
+                <div class="provider-badge">✍️ Anthropic (Claude 3.5 Sonnet / Haiku)</div>
+                <div class="provider-badge">⚡ Groq (LPU Ultra-Fast Inference)</div>
+                <div class="provider-badge">🔒 Ollama (100% Private On-Premise)</div>
+                <div class="provider-badge">🌐 Custom Endpoint (DeepSeek, OpenRouter)</div>
+            </div>
         </div>
+
+        <!-- Section 4: Marketplace Feature Comparison -->
+        <div class="feature-box">
+            <h3><span>🏆</span> How We Compare to Other Marketplace Modules</h3>
+            <div style="overflow-x: auto;">
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Capability</th>
+                            <th>Ridhira AI Analyst <span class="tag-best">WINNER</span></th>
+                            <th>Typical Competitor Apps</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Voice Speech-to-Text Input</strong></td>
+                            <td class="tag-yes">✓ Built-in (0 cost, Web Speech)</td>
+                            <td class="tag-no">✗ Typing only</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Executive AI Insights &amp; Advice</strong></td>
+                            <td class="tag-yes">✓ Automated Takeaways</td>
+                            <td class="tag-no">✗ Raw charts only</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Conversational Refinement</strong></td>
+                            <td class="tag-yes">✓ Multi-turn follow-ups</td>
+                            <td class="tag-no">✗ Must restart query</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Local Ollama / On-Premise LLM</strong></td>
+                            <td class="tag-yes">✓ 100% Private (No API cost)</td>
+                            <td class="tag-no">✗ Cloud API keys only</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Groq Sub-Second Inference</strong></td>
+                            <td class="tag-yes">✓ Supported</td>
+                            <td class="tag-no">✗ Not supported</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Odoo 20 Native OWL 3</strong></td>
+                            <td class="tag-yes">✓ Fully compatible</td>
+                            <td class="tag-no">✗ Legacy widgets / v16-v17</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Query History &amp; Favorite Star</strong></td>
+                            <td class="tag-yes">✓ Included with 1-click re-run</td>
+                            <td class="tag-no">✗ Missing or basic</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Multi-Company Safeguards</strong></td>
+                            <td class="tag-yes">✓ Automatic Company Filtering</td>
+                            <td class="tag-no">✗ May leak cross-company data</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Section 5: Security & Privacy Guarantee -->
+        <div class="feature-box">
+            <h3><span>🛡️</span> Zero Data Leakage: Enterprise Privacy First</h3>
+            <p>
+                Your raw database records, customer names, financial figures, and private communications <strong>never leave your server</strong>. The AI only interprets the database schema (field descriptions and types) to construct standard Odoo ORM domains. Odoo's internal record rules and user permissions execute locally on your own database.
+            </p>
+        </div>
+
     </div>
 
 </body>

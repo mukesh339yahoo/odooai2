@@ -14,7 +14,6 @@ def _clean_json_response(raw_text):
     if not raw_text:
         return ""
     text = raw_text.strip()
-    # Strip markdown code blocks if present
     if text.startswith("```"):
         lines = text.splitlines()
         if lines and lines[0].startswith("```"):
@@ -23,7 +22,6 @@ def _clean_json_response(raw_text):
             lines = lines[:-1]
         text = "\n".join(lines).strip()
     
-    # In case there is still non-JSON text surrounding the braces
     match = re.search(r'(\{.*\}|\[.*\])', text, re.DOTALL)
     if match:
         return match.group(1).strip()
@@ -33,7 +31,7 @@ def _clean_json_response(raw_text):
 class AiReportQuery(models.Model):
     _name = 'ai.report.query'
     _description = 'AI Report Query'
-    _order = 'id desc'
+    _order = 'is_favorite desc, id desc'
 
     name = fields.Char(string='Query Name', required=True)
     user_prompt = fields.Text(string='User Prompt', required=True)
@@ -44,27 +42,33 @@ class AiReportQuery(models.Model):
     measure = fields.Char(string='Measure Field')
     chart_type = fields.Selection([
         ('bar', 'Bar Chart'),
+        ('stacked_bar', 'Stacked Bar Chart'),
         ('pie', 'Pie Chart'),
         ('line', 'Line Chart'),
         ('pivot', 'Pivot Table'),
     ], string='Chart Type', default='bar')
+    ai_insight = fields.Text(string='Executive AI Insights & Takeaways')
+    is_favorite = fields.Boolean(string='Favorite', default=False)
+    history_json = fields.Text(string='Conversation History (JSON)', default='[]')
     user_id = fields.Many2one('res.users', string='User', default=lambda self: self.env.user)
+    company_id = fields.Many2one('res.company', string='Company', default=lambda self: self.env.company)
     create_date = fields.Datetime(string='Created On', readonly=True)
 
     def _get_llm_response(self, prompt):
         """
-        Query the configured LLM Provider (OpenAI, Gemini, Anthropic) with timeout protection
-        and dynamic model configuration for Odoo 20.
+        Query the configured LLM Provider (Gemini, OpenAI, Anthropic, Groq, Ollama, Custom)
+        with timeout protection and multi-provider support.
         """
-        provider = self.env['ir.config_parameter'].sudo().get_param('ridhira_ai_chat_report.llm_provider', 'gemini')
+        ir_config = self.env['ir.config_parameter'].sudo()
+        provider = ir_config.get_param('ridhira_ai_chat_report.llm_provider', 'gemini')
         timeout = 40  # Seconds
-        
+
         if provider == 'openai':
-            api_key = self.env['ir.config_parameter'].sudo().get_param('ridhira_ai_chat_report.openai_api_key')
+            api_key = ir_config.get_param('ridhira_ai_chat_report.openai_api_key')
             if not api_key:
                 raise UserError(_("OpenAI API Key is not configured in Settings."))
             
-            model = self.env['ir.config_parameter'].sudo().get_param('ridhira_ai_chat_report.openai_model', 'gpt-4o')
+            model = ir_config.get_param('ridhira_ai_chat_report.openai_model', 'gpt-4o')
             headers = {
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {api_key}"
@@ -73,7 +77,6 @@ class AiReportQuery(models.Model):
                 "model": model,
                 "messages": [{"role": "user", "content": prompt}],
                 "temperature": 0.1,
-                "response_format": {"type": "json_object"}
             }
             try:
                 response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload, timeout=timeout)
@@ -85,18 +88,18 @@ class AiReportQuery(models.Model):
                 return data['choices'][0]['message']['content']
             else:
                 raise UserError(_("OpenAI API Error (%s): %s") % (response.status_code, response.text))
-                
+
         elif provider == 'gemini':
-            api_key = self.env['ir.config_parameter'].sudo().get_param('ridhira_ai_chat_report.gemini_api_key')
+            api_key = ir_config.get_param('ridhira_ai_chat_report.gemini_api_key')
             if not api_key:
                 raise UserError(_("Gemini API Key is not configured in Settings."))
             
-            model = self.env['ir.config_parameter'].sudo().get_param('ridhira_ai_chat_report.gemini_model', 'gemini-2.0-flash')
+            model = ir_config.get_param('ridhira_ai_chat_report.gemini_model', 'gemini-2.0-flash')
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
             headers = {"Content-Type": "application/json"}
             payload = {
                 "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {"temperature": 0.1, "responseMimeType": "application/json"}
+                "generationConfig": {"temperature": 0.1}
             }
             try:
                 response = requests.post(url, headers=headers, json=payload, timeout=timeout)
@@ -111,23 +114,22 @@ class AiReportQuery(models.Model):
                     raise UserError(_("Invalid response structure received from Gemini."))
             else:
                 raise UserError(_("Gemini API Error (%s): %s") % (response.status_code, response.text))
-                
+
         elif provider == 'anthropic':
-            api_key = self.env['ir.config_parameter'].sudo().get_param('ridhira_ai_chat_report.anthropic_api_key')
+            api_key = ir_config.get_param('ridhira_ai_chat_report.anthropic_api_key')
             if not api_key:
                 raise UserError(_("Anthropic API Key is not configured in Settings."))
             
-            model = self.env['ir.config_parameter'].sudo().get_param('ridhira_ai_chat_report.anthropic_model', 'claude-3-5-sonnet-20241022')
+            model = ir_config.get_param('ridhira_ai_chat_report.anthropic_model', 'claude-3-5-sonnet-20241022')
             headers = {
                 "x-api-key": api_key,
                 "anthropic-version": "2023-06-01",
                 "content-type": "application/json"
             }
-            full_prompt = prompt + "\nRespond with ONLY valid JSON."
             payload = {
                 "model": model,
-                "max_tokens": 1024,
-                "messages": [{"role": "user", "content": full_prompt}]
+                "max_tokens": 1200,
+                "messages": [{"role": "user", "content": prompt}]
             }
             try:
                 response = requests.post("https://api.anthropic.com/v1/messages", headers=headers, json=payload, timeout=timeout)
@@ -143,13 +145,113 @@ class AiReportQuery(models.Model):
             else:
                 raise UserError(_("Anthropic API Error (%s): %s") % (response.status_code, response.text))
 
+        elif provider == 'groq':
+            api_key = ir_config.get_param('ridhira_ai_chat_report.groq_api_key')
+            if not api_key:
+                raise UserError(_("Groq API Key is not configured in Settings."))
+            
+            model = ir_config.get_param('ridhira_ai_chat_report.groq_model', 'llama-3.3-70b-versatile')
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {api_key}"
+            }
+            payload = {
+                "model": model,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.1,
+            }
+            try:
+                response = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload, timeout=timeout)
+            except requests.exceptions.RequestException as e:
+                raise UserError(_("Groq Connection Error: %s") % str(e))
+                
+            if response.status_code == 200:
+                data = response.json()
+                return data['choices'][0]['message']['content']
+            else:
+                raise UserError(_("Groq API Error (%s): %s") % (response.status_code, response.text))
+
+        elif provider == 'ollama':
+            endpoint = ir_config.get_param('ridhira_ai_chat_report.ollama_endpoint', 'http://localhost:11434').rstrip('/')
+            model = ir_config.get_param('ridhira_ai_chat_report.ollama_model', 'llama3.2')
+            url = f"{endpoint}/api/generate"
+            payload = {
+                "model": model,
+                "prompt": prompt,
+                "stream": False,
+                "options": {"temperature": 0.1}
+            }
+            try:
+                response = requests.post(url, json=payload, timeout=timeout)
+            except requests.exceptions.RequestException as e:
+                raise UserError(_("Ollama Connection Error (ensure Ollama is running): %s") % str(e))
+                
+            if response.status_code == 200:
+                data = response.json()
+                return data.get('response', '')
+            else:
+                raise UserError(_("Ollama API Error (%s): %s") % (response.status_code, response.text))
+
+        elif provider == 'custom':
+            endpoint = ir_config.get_param('ridhira_ai_chat_report.custom_endpoint', 'https://api.deepseek.com/v1').rstrip('/')
+            api_key = ir_config.get_param('ridhira_ai_chat_report.custom_api_key', '')
+            model = ir_config.get_param('ridhira_ai_chat_report.custom_model', 'deepseek-chat')
+            headers = {"Content-Type": "application/json"}
+            if api_key:
+                headers["Authorization"] = f"Bearer {api_key}"
+                
+            url = f"{endpoint}/chat/completions" if not endpoint.endswith('/chat/completions') else endpoint
+            payload = {
+                "model": model,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.1,
+            }
+            try:
+                response = requests.post(url, headers=headers, json=payload, timeout=timeout)
+            except requests.exceptions.RequestException as e:
+                raise UserError(_("Custom Endpoint Connection Error: %s") % str(e))
+                
+            if response.status_code == 200:
+                data = response.json()
+                return data['choices'][0]['message']['content']
+            else:
+                raise UserError(_("Custom Endpoint Error (%s): %s") % (response.status_code, response.text))
+
         raise UserError(_("Invalid LLM Provider configured: %s") % provider)
+
+    def _generate_ai_insight(self, user_prompt, model_name, groupby, measure, domain):
+        """
+        Generate a concise, high-value Executive Business Insight summarizing the report intent.
+        """
+        enable_insights = self.env['ir.config_parameter'].sudo().get_param('ridhira_ai_chat_report.enable_ai_insights', 'True')
+        if str(enable_insights).lower() not in ['true', '1']:
+            return ""
+
+        prompt = f"""
+        You are an elite Business Intelligence executive advisor.
+        A report has been generated with:
+        User Question: "{user_prompt}"
+        Target Odoo Model: "{model_name}"
+        Group By: {groupby}
+        Measure: {measure}
+        Domain/Filters: {domain}
+
+        In 2 concise, executive bullet points (max 50 words total):
+        1. Summarize what this visualization reveals for business leaders.
+        2. Give 1 strategic recommendation based on this metric.
+        Return plain text without formatting or markdown headers.
+        """
+        try:
+            insight_res = self._get_llm_response(prompt)
+            return insight_res.strip()
+        except Exception:
+            return ""
 
     @api.model
     def action_generate_query(self, user_prompt):
         """
         Translates user natural language prompt into Odoo ORM parameters.
-        Returns a dict with domain, fields, groupby, model_name, chart_type, measure, and action.
+        Returns a dict with domain, fields, groupby, model_name, chart_type, measure, ai_insight, and action.
         """
         if not user_prompt or not user_prompt.strip():
             raise UserError(_("Please provide a query prompt."))
@@ -157,7 +259,7 @@ class AiReportQuery(models.Model):
         # Step 1: Identify Target Model
         step1_prompt = f"""
         You are an Odoo ORM expert. The user wants to generate a report based on this query: "{user_prompt}"
-        Identify the primary Odoo model they are referring to (e.g., 'sale.order', 'purchase.order', 'account.move', 'crm.lead', 'res.partner', 'stock.picking', 'project.task', 'hr.expense').
+        Identify the primary Odoo model they are referring to (e.g., 'sale.order', 'purchase.order', 'account.move', 'crm.lead', 'res.partner', 'stock.picking', 'project.task', 'hr.expense', 'mrp.production').
         Return ONLY a JSON object with the key "model_name". For example: {{"model_name": "sale.order"}}
         """
         
@@ -195,10 +297,10 @@ class AiReportQuery(models.Model):
         - "domain": A valid Odoo domain list (e.g., [("state", "=", "sale")]). If no filter is needed, use [].
         - "fields_list": A list of field names to read. Must include any field used in groupby and any numeric field to measure.
         - "groupby": A list of field names to group by. (e.g., ["partner_id"] or ["date:month"]). If none, use [].
-        - "measure": A numeric field name (type 'float', 'monetary', or 'integer') to aggregate/measure (e.g., "amount_total" or "__count__"). If count only, use "__count__".
-        - "chart_type": One of "bar", "pie", "line", "pivot".
+        - "measure": A numeric field name (type 'float', 'monetary', or 'integer') to aggregate/measure (e.g., "amount_total" or "__count__").
+        - "chart_type": One of "bar", "stacked_bar", "pie", "line", "pivot".
         
-        Return ONLY the JSON object.
+        Return ONLY valid JSON.
         """
         
         step2_res = self._get_llm_response(step2_prompt)
@@ -213,7 +315,6 @@ class AiReportQuery(models.Model):
         valid_fields = [f for f in raw_fields if f in model_fields]
 
         raw_groupby = query_data.get('groupby', [])
-        # Handle field or field:interval like create_date:month
         valid_groupby = []
         for g in raw_groupby:
             base_field = g.split(':')[0] if isinstance(g, str) else g
@@ -227,20 +328,32 @@ class AiReportQuery(models.Model):
             valid_fields = ['display_name']
 
         chart_type = query_data.get('chart_type', 'bar')
-        if chart_type not in ['bar', 'pie', 'line', 'pivot']:
+        if chart_type not in ['bar', 'stacked_bar', 'pie', 'line', 'pivot']:
             chart_type = 'bar'
 
         domain = query_data.get('domain', [])
         if not isinstance(domain, list):
             domain = []
 
+        # Multi-company safeguard
+        if 'company_id' in model_fields and self.env.companies:
+            has_company_filter = any(isinstance(term, (list, tuple)) and term[0] == 'company_id' for term in domain)
+            if not has_company_filter:
+                domain.append(('company_id', 'in', self.env.companies.ids))
+
+        # Generate Executive AI Insight
+        ai_insight = self._generate_ai_insight(user_prompt, model_name, valid_groupby, valid_measure, domain)
+
         # Build action dictionary for Odoo 20
         is_pivot = (chart_type == 'pivot')
         views = [[False, 'pivot' if is_pivot else 'graph'], [False, 'list']]
         context = {
             'group_by': valid_groupby,
-            'graph_mode': chart_type if not is_pivot else 'bar',
+            'graph_mode': 'bar' if (chart_type in ['bar', 'stacked_bar'] or is_pivot) else chart_type,
         }
+        if chart_type == 'stacked_bar':
+            context['stacked'] = "1"
+
         if valid_measure and valid_measure != '__count__':
             context['graph_measure'] = valid_measure
             context['pivot_measures'] = [valid_measure]
@@ -260,7 +373,8 @@ class AiReportQuery(models.Model):
             'target': 'current',
         }
 
-        # Persist query record for user history
+        # Persist query record for user history & conversational refinement
+        history_init = [{'role': 'user', 'content': user_prompt}, {'role': 'assistant', 'insight': ai_insight, 'chart_type': chart_type}]
         query_record = False
         try:
             query_record = self.create({
@@ -272,7 +386,10 @@ class AiReportQuery(models.Model):
                 'groupby': json.dumps(valid_groupby),
                 'measure': valid_measure or '',
                 'chart_type': chart_type,
+                'ai_insight': ai_insight,
+                'history_json': json.dumps(history_init),
                 'user_id': self.env.user.id,
+                'company_id': self.env.company.id,
             })
         except Exception:
             pass
@@ -285,8 +402,137 @@ class AiReportQuery(models.Model):
             'groupby': valid_groupby,
             'measure': valid_measure or '',
             'chart_type': chart_type,
+            'ai_insight': ai_insight,
             'action': action_def,
         }
+
+    @api.model
+    def action_refine_query(self, query_id, refinement_prompt):
+        """
+        Conversational iterative refinement: Update an existing report using follow-up prompts.
+        e.g., 'Make it a line chart', 'Only show confirmed orders', 'Group by salesperson'.
+        """
+        if not query_id:
+            return self.action_generate_query(refinement_prompt)
+
+        query_rec = self.browse(query_id)
+        if not query_rec.exists():
+            return self.action_generate_query(refinement_prompt)
+
+        model_name = query_rec.model_name
+        current_domain = query_rec.domain or '[]'
+        current_groupby = query_rec.groupby or '[]'
+        current_chart_type = query_rec.chart_type
+        current_measure = query_rec.measure or ''
+
+        # Step: Refine ORM parameters based on conversation
+        refine_prompt = f"""
+        You are an Odoo BI expert. The user is refining an existing report on model '{model_name}'.
+        Current parameters:
+        - Domain: {current_domain}
+        - Group By: {current_groupby}
+        - Measure: {current_measure}
+        - Chart Type: {current_chart_type}
+
+        User Refinement Instruction: "{refinement_prompt}"
+
+        Update the parameters accordingly.
+        Return ONLY a JSON object with keys:
+        - "domain": updated domain list
+        - "groupby": updated groupby list
+        - "measure": updated measure field
+        - "chart_type": "bar", "stacked_bar", "pie", "line", or "pivot"
+        """
+
+        res = self._get_llm_response(refine_prompt)
+        cleaned = _clean_json_response(res)
+        try:
+            updated_data = json.loads(cleaned)
+        except Exception:
+            raise UserError(_("Failed to parse conversational refinement."))
+
+        model_fields = self.env[model_name].fields_get()
+        raw_groupby = updated_data.get('groupby', [])
+        valid_groupby = [g for g in raw_groupby if (g.split(':')[0] if isinstance(g, str) else g) in model_fields]
+        raw_measure = updated_data.get('measure')
+        valid_measure = raw_measure if (raw_measure in model_fields or raw_measure == '__count__') else current_measure
+        chart_type = updated_data.get('chart_type', current_chart_type)
+        if chart_type not in ['bar', 'stacked_bar', 'pie', 'line', 'pivot']:
+            chart_type = current_chart_type
+
+        domain = updated_data.get('domain', [])
+        if not isinstance(domain, list):
+            try:
+                domain = json.loads(current_domain)
+            except Exception:
+                domain = []
+
+        # Generate updated executive insight
+        ai_insight = self._generate_ai_insight(f"{query_rec.user_prompt} -> {refinement_prompt}", model_name, valid_groupby, valid_measure, domain)
+
+        # Update history
+        history = []
+        if query_rec.history_json:
+            try:
+                history = json.loads(query_rec.history_json)
+            except Exception:
+                history = []
+        history.append({'role': 'user', 'content': refinement_prompt})
+        history.append({'role': 'assistant', 'insight': ai_insight, 'chart_type': chart_type})
+
+        query_rec.write({
+            'domain': json.dumps(domain),
+            'groupby': json.dumps(valid_groupby),
+            'measure': valid_measure or '',
+            'chart_type': chart_type,
+            'ai_insight': ai_insight,
+            'history_json': json.dumps(history),
+        })
+
+        is_pivot = (chart_type == 'pivot')
+        context = {
+            'group_by': valid_groupby,
+            'graph_mode': 'bar' if (chart_type in ['bar', 'stacked_bar'] or is_pivot) else chart_type,
+        }
+        if chart_type == 'stacked_bar':
+            context['stacked'] = "1"
+        if valid_measure and valid_measure != '__count__':
+            context['graph_measure'] = valid_measure
+            context['pivot_measures'] = [valid_measure]
+        if valid_groupby:
+            context['graph_groupbys'] = valid_groupby
+            context['pivot_row_groupby'] = valid_groupby
+
+        action_def = {
+            'type': 'ir.actions.act_window',
+            'name': f"AI: {refinement_prompt[:40]}",
+            'res_model': model_name,
+            'view_mode': f"{'pivot' if is_pivot else 'graph'},list",
+            'views': [[False, 'pivot' if is_pivot else 'graph'], [False, 'list']],
+            'domain': domain,
+            'context': context,
+            'target': 'current',
+        }
+
+        return {
+            'query_id': query_rec.id,
+            'model_name': model_name,
+            'domain': domain,
+            'fields_list': json.loads(query_rec.fields_list or '[]'),
+            'groupby': valid_groupby,
+            'measure': valid_measure or '',
+            'chart_type': chart_type,
+            'ai_insight': ai_insight,
+            'action': action_def,
+        }
+
+    def action_toggle_favorite(self):
+        """
+        Star / unstar a query for quick access.
+        """
+        for record in self:
+            record.is_favorite = not record.is_favorite
+        return True
 
     def action_open_report(self):
         """
@@ -310,8 +556,10 @@ class AiReportQuery(models.Model):
         is_pivot = (self.chart_type == 'pivot')
         context = {
             'group_by': groupby,
-            'graph_mode': self.chart_type if not is_pivot else 'bar',
+            'graph_mode': 'bar' if (self.chart_type in ['bar', 'stacked_bar'] or is_pivot) else self.chart_type,
         }
+        if self.chart_type == 'stacked_bar':
+            context['stacked'] = "1"
         if self.measure and self.measure != '__count__':
             context['graph_measure'] = self.measure
             context['pivot_measures'] = [self.measure]

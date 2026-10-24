@@ -1,15 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
-    <!-- Systray AI Query Bar Component -->
+    <!-- ============================================== -->
+    <!-- Systray AI Query Bar Component (Top Navbar)    -->
+    <!-- ============================================== -->
     <t t-name="ridhira_ai_chat_report.AiQueryBar">
         <div class="o_ai_chat_report_systray d-flex align-items-center">
-            <button class="btn btn-sm btn-link d-flex align-items-center p-2 border-0 shadow-none"
+            <button class="btn btn-sm btn-link d-flex align-items-center p-2 border-0 shadow-none position-relative"
                     t-on-click="togglePanel"
-                    title="AI Data Analyst (Odoo 20)">
+                    title="AI Data Analyst (Voice &amp; Multi-LLM)">
                 <i class="fa fa-magic fa-lg text-primary o_ai_wand_icon" role="img" aria-label="AI Analyst"/>
+                <span t-if="state.isListening" class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle o_ai_recording_pulse">
+                    <span class="visually-hidden">Recording</span>
+                </span>
             </button>
             
-            <div t-if="state.isOpen" class="o_ai_chat_panel dropdown-menu show shadow-lg border-0 rounded-4 p-3 animate__animated animate__fadeIn" t-on-click.stop="">
+            <div t-if="state.isOpen" class="o_ai_chat_panel dropdown-menu show shadow-lg border-0 rounded-4 p-3" t-on-click.stop="">
+                <!-- Header -->
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <h6 class="mb-0 text-primary fw-bold d-flex align-items-center">
                         <i class="fa fa-magic me-2"/> AI Data Analyst
@@ -17,10 +23,32 @@
                     <button class="btn-close btn-close-sm" t-on-click="closePanel" title="Close"/>
                 </div>
                 
-                <p class="text-muted small mb-3">Ask questions in plain English to build instant charts &amp; pivot tables.</p>
-                
-                <!-- Suggestions Chips -->
-                <div class="o_ai_suggestions mb-2 d-flex flex-wrap gap-1">
+                <!-- Subtitle / Mode Indicator -->
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted extra-small">
+                        <t t-if="state.isRefineMode">
+                            <span class="badge bg-success-subtle text-success me-1">Active Report</span>
+                            <code class="extra-small"><t t-esc="state.activeResult.model_name"/></code> (<t t-esc="state.activeResult.chart_type"/>)
+                        </t>
+                        <t t-else="">Ask in plain English or speak with your voice</t>
+                    </span>
+                    <button t-if="state.isRefineMode" class="btn btn-sm btn-link p-0 extra-small text-decoration-none" t-on-click="resetQuery">
+                        <i class="fa fa-plus me-1"/> New Query
+                    </button>
+                </div>
+
+                <!-- Executive AI Insight (If generated) -->
+                <div t-if="state.activeResult and state.activeResult.ai_insight" class="o_ai_insight_box rounded-3 p-2 mb-3">
+                    <div class="d-flex align-items-center fw-semibold text-primary extra-small mb-1">
+                        <i class="fa fa-lightbulb-o me-1"/> Executive AI Takeaway:
+                    </div>
+                    <div class="extra-small text-muted fst-italic">
+                        <t t-esc="state.activeResult.ai_insight"/>
+                    </div>
+                </div>
+
+                <!-- Suggestions Chips (When in new query mode) -->
+                <div t-if="!state.isRefineMode" class="o_ai_suggestions mb-2 d-flex flex-wrap gap-1">
                     <t t-foreach="suggestions" t-as="sug" t-key="sug">
                         <button type="button" class="badge rounded-pill o_ai_chip border-0 text-truncate" 
                                 t-on-click="() => this.setPrompt(sug)"
@@ -30,24 +58,75 @@
                     </t>
                 </div>
 
-                <div class="mb-3 position-relative">
+                <!-- Main Prompt Textarea (New Query Mode) -->
+                <div t-if="!state.isRefineMode" class="mb-3 position-relative">
                     <textarea 
-                        class="form-control o_ai_textarea p-2" 
+                        class="form-control o_ai_textarea p-2 pe-5" 
                         t-model="state.prompt" 
                         t-on-keydown="onKeydown"
-                        placeholder="e.g., Show me monthly sales by salesperson as a bar chart..." 
+                        placeholder="e.g., Show monthly revenue by customer as a bar chart..." 
                         rows="3"
                         t-att-disabled="state.isLoading">
                     </textarea>
+                    <!-- Voice Mic Button -->
+                    <button type="button" 
+                            class="btn btn-sm btn-link position-absolute end-0 bottom-0 mb-1 me-2 o_ai_mic_btn"
+                            t-att-class="{'text-danger o_ai_recording_mic': state.isListening, 'text-muted': !state.isListening}"
+                            t-on-click="toggleVoiceInput"
+                            title="Speak your query">
+                        <i class="fa fa-microphone fa-lg"/>
+                    </button>
+                </div>
+
+                <!-- Conversational Refinement Toolbar (Refinement Mode) -->
+                <div t-if="state.isRefineMode" class="mb-3">
+                    <!-- Quick Chart Format Switchers -->
+                    <div class="d-flex gap-1 mb-2">
+                        <button class="btn btn-xs btn-outline-secondary rounded-pill extra-small" t-on-click="() => this.submitRefinement('Change to a bar chart')">
+                            <i class="fa fa-bar-chart"/> Bar
+                        </button>
+                        <button class="btn btn-xs btn-outline-secondary rounded-pill extra-small" t-on-click="() => this.submitRefinement('Change to a stacked bar chart')">
+                            <i class="fa fa-tasks"/> Stacked
+                        </button>
+                        <button class="btn btn-xs btn-outline-secondary rounded-pill extra-small" t-on-click="() => this.submitRefinement('Change to a pie chart')">
+                            <i class="fa fa-pie-chart"/> Pie
+                        </button>
+                        <button class="btn btn-xs btn-outline-secondary rounded-pill extra-small" t-on-click="() => this.submitRefinement('Change to a line chart')">
+                            <i class="fa fa-line-chart"/> Line
+                        </button>
+                        <button class="btn btn-xs btn-outline-secondary rounded-pill extra-small" t-on-click="() => this.submitRefinement('Show as a pivot table')">
+                            <i class="fa fa-table"/> Pivot
+                        </button>
+                    </div>
+
+                    <div class="position-relative">
+                        <input type="text" 
+                               class="form-control form-control-sm rounded-pill pe-4" 
+                               placeholder="Refine (e.g. filter last 30 days, group by stage)..."
+                               t-model="state.refinePrompt"
+                               t-on-keydown="onKeydown"
+                               t-att-disabled="state.isLoading"/>
+                        <button class="btn btn-sm btn-link position-absolute end-0 top-50 translate-middle-y text-primary p-0 me-2"
+                                t-on-click="() => this.submitRefinement()"
+                                title="Send refinement">
+                            <i class="fa fa-paper-plane"/>
+                        </button>
+                    </div>
                 </div>
                 
                 <div t-if="state.error" class="alert alert-danger p-2 small mb-3 rounded-3">
                     <i class="fa fa-exclamation-triangle me-1"/> <t t-esc="state.error"/>
                 </div>
                 
+                <!-- Footer Controls -->
                 <div class="d-flex justify-content-between align-items-center">
-                    <span class="text-muted extra-small">Press Enter ↵ to generate</span>
-                    <button class="btn btn-primary btn-sm px-3 d-flex align-items-center rounded-pill shadow-sm" 
+                    <span class="text-muted extra-small">
+                        <t t-if="state.isListening">
+                            <i class="fa fa-circle text-danger me-1"/> Listening...
+                        </t>
+                        <t t-else="">Press Enter ↵</t>
+                    </span>
+                    <button t-if="!state.isRefineMode" class="btn btn-primary btn-sm px-3 d-flex align-items-center rounded-pill shadow-sm" 
                             t-on-click="submitQuery" 
                             t-att-disabled="state.isLoading || !state.prompt">
                         <t t-if="state.isLoading">
@@ -57,86 +136,134 @@
                             Generate Report <i class="fa fa-arrow-right ms-2"/>
                         </t>
                     </button>
+                    <button t-if="state.isRefineMode" class="btn btn-primary btn-sm px-3 rounded-pill shadow-sm"
+                            t-on-click="() => this.submitRefinement()"
+                            t-att-disabled="state.isLoading || !state.refinePrompt">
+                        <t t-if="state.isLoading">
+                            <i class="fa fa-circle-o-notch fa-spin me-2"/> Updating...
+                        </t>
+                        <t t-else="">
+                            Update Chart <i class="fa fa-refresh ms-2"/>
+                        </t>
+                    </button>
                 </div>
             </div>
         </div>
     </t>
 
-    <!-- Full Dashboard Client Action Component -->
+    <!-- ============================================== -->
+    <!-- Full AI Analytics Hub (Client Action Page)     -->
+    <!-- ============================================== -->
     <t t-name="ridhira_ai_chat_report.AiReportDashboard">
         <div class="o_ai_report_dashboard h-100 overflow-auto p-4 p-md-5">
             <div class="container-fluid max-w-1200 mx-auto">
-                <!-- Header / Banner -->
-                <div class="o_ai_dashboard_header d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-5 p-4 rounded-4 shadow-sm">
+                
+                <!-- Hero Header -->
+                <div class="o_ai_dashboard_header d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 p-4 rounded-4 shadow-sm">
                     <div>
                         <div class="d-inline-flex align-items-center badge bg-primary-subtle text-primary mb-2 px-3 py-2 rounded-pill fw-semibold">
-                            <i class="fa fa-sparkles me-2"/> Odoo 20 AI Analytics Engine
+                            <i class="fa fa-sparkles me-2"/> Odoo 20 AI Executive Analytics
                         </div>
                         <h2 class="fw-bold mb-1">AI Chat-to-Report &amp; Dashboard Assistant</h2>
-                        <p class="text-muted mb-0">Transform natural language into real-time business intelligence, interactive charts, and pivot tables.</p>
+                        <p class="text-muted mb-0">Translate plain English and voice into real-time interactive charts, pivot tables, and executive takeaways.</p>
                     </div>
                     <div class="mt-3 mt-md-0 d-flex gap-2">
                         <button class="btn btn-outline-secondary rounded-pill px-3" t-on-click="openHistory">
-                            <i class="fa fa-history me-1"/> Query History
+                            <i class="fa fa-star text-warning me-1"/> Favorites &amp; History
                         </button>
                         <button class="btn btn-outline-primary rounded-pill px-3" t-on-click="openSettings">
-                            <i class="fa fa-cog me-1"/> Settings
+                            <i class="fa fa-cog me-1"/> Configure AI Models
                         </button>
                     </div>
                 </div>
 
-                <!-- Main Query Input Card -->
-                <div class="card border-0 shadow-sm rounded-4 p-4 mb-5 o_ai_query_card">
+                <!-- Main Query Box Card -->
+                <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 o_ai_query_card">
                     <div class="d-flex align-items-center mb-3">
                         <div class="o_ai_badge_icon rounded-circle d-flex align-items-center justify-content-center me-3 text-white">
                             <i class="fa fa-magic fa-lg"/>
                         </div>
                         <div>
                             <h5 class="fw-bold mb-0">Ask Your Business Intelligence Assistant</h5>
-                            <span class="text-muted small">Type any query across Sales, Accounting, Inventory, CRM, or Custom models.</span>
+                            <span class="text-muted small">Voice-enabled natural language queries with multi-LLM speed.</span>
                         </div>
                     </div>
 
+                    <!-- Voice Indicator Strip -->
+                    <div t-if="state.isListening" class="alert alert-danger py-2 px-3 mb-2 rounded-3 d-flex align-items-center">
+                        <span class="spinner-grow spinner-grow-sm text-danger me-2" role="status"/>
+                        <strong>Listening to your voice...</strong> Speak clearly, your words are being transcribed in real-time.
+                    </div>
+
+                    <!-- Input Box with Voice Mic -->
                     <div class="mb-3 position-relative">
                         <textarea 
-                            class="form-control o_ai_main_textarea p-3 fs-5" 
+                            class="form-control o_ai_main_textarea p-3 fs-5 pe-5" 
                             t-model="state.prompt" 
                             t-on-keydown="onKeydown"
                             placeholder="e.g., Show me monthly revenue grouped by partner for the last 6 months in a line chart..." 
                             rows="3"
                             t-att-disabled="state.isLoading">
                         </textarea>
+                        
+                        <button type="button" 
+                                class="btn btn-link position-absolute end-0 top-50 translate-middle-y me-3 o_ai_mic_btn_large"
+                                t-att-class="{'text-danger o_ai_recording_mic': state.isListening, 'text-primary': !state.isListening}"
+                                t-on-click="toggleVoiceInput"
+                                title="Click to speak your query">
+                            <i class="fa fa-microphone fa-2x"/>
+                        </button>
                     </div>
 
+                    <!-- Executive AI Insight Card (If active) -->
+                    <div t-if="state.activeResult and state.activeResult.ai_insight" class="o_ai_insight_card rounded-3 p-3 mb-3 border-start border-4 border-primary">
+                        <div class="d-flex align-items-center fw-bold text-primary mb-1">
+                            <i class="fa fa-lightbulb-o fa-lg me-2"/> Executive AI Business Takeaway &amp; Strategy
+                        </div>
+                        <div class="text-dark small">
+                            <t t-esc="state.activeResult.ai_insight"/>
+                        </div>
+                    </div>
+
+                    <!-- Error Alert -->
                     <div t-if="state.error" class="alert alert-danger p-3 rounded-3 mb-3">
                         <i class="fa fa-exclamation-circle me-2"/> <t t-esc="state.error"/>
                     </div>
 
+                    <!-- Action Bar -->
                     <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3">
                         <div class="text-muted small">
-                            <i class="fa fa-shield me-1 text-success"/> Data remains strictly inside your server. Only schema definitions are consulted.
+                            <i class="fa fa-shield me-1 text-success"/> Data remains strictly on your server. Only ORM metadata is analyzed.
                         </div>
-                        <button class="btn btn-primary px-4 py-2 rounded-pill fw-semibold shadow d-flex align-items-center justify-content-center" 
-                                t-on-click="submitQuery" 
-                                t-att-disabled="state.isLoading || !state.prompt">
-                            <t t-if="state.isLoading">
-                                <i class="fa fa-circle-o-notch fa-spin me-2"/> Generating AI Report...
-                            </t>
-                            <t t-else="">
-                                <i class="fa fa-bolt me-2"/> Generate Visual Report
-                            </t>
-                        </button>
+                        <div class="d-flex gap-2">
+                            <button t-if="state.isRefineMode" class="btn btn-outline-secondary rounded-pill px-3" t-on-click="resetQuery">
+                                <i class="fa fa-plus me-1"/> New Prompt
+                            </button>
+                            <button class="btn btn-primary px-4 py-2 rounded-pill fw-semibold shadow d-flex align-items-center justify-content-center" 
+                                    t-on-click="submitQuery" 
+                                    t-att-disabled="state.isLoading || !state.prompt">
+                                <t t-if="state.isLoading">
+                                    <i class="fa fa-circle-o-notch fa-spin me-2"/> Analyzing Business Data...
+                                </t>
+                                <t t-else="">
+                                    <i class="fa fa-bolt me-2"/> Generate Visual Report
+                                </t>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Presets / Quick Discovery Grid -->
+                <!-- Instant Discovery Categories Grid -->
                 <div class="mb-5">
-                    <h5 class="fw-bold mb-3"><i class="fa fa-compass me-2 text-primary"/> Instant Explore Prompts</h5>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold mb-0"><i class="fa fa-compass me-2 text-primary"/> Instant Explore Prompts</h5>
+                        <span class="text-muted small">Click any prompt to instantly pre-fill and run</span>
+                    </div>
                     <div class="row g-3">
                         <t t-foreach="categories" t-as="cat" t-key="cat.title">
                             <div class="col-12 col-md-6 col-xl-3">
                                 <div class="card h-100 border-0 shadow-sm rounded-4 p-3 o_ai_category_card">
-                                    <h6 class="fw-bold text-primary mb-3 d-flex align-items-center">
+                                    <h6 class="fw-bold mb-3 d-flex align-items-center" t-att-class="cat.color">
                                         <i t-attf-class="fa #{cat.icon} me-2"/> <t t-esc="cat.title"/>
                                     </h6>
                                     <div class="d-flex flex-column gap-2">
@@ -153,37 +280,54 @@
                     </div>
                 </div>
 
-                <!-- Recent Queries Table / Section -->
+                <!-- Starred Favorites & Recent Queries -->
                 <div t-if="state.recentQueries and state.recentQueries.length" class="card border-0 shadow-sm rounded-4 p-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="fw-bold mb-0"><i class="fa fa-clock-o me-2 text-primary"/> Recent Queries</h5>
-                        <button class="btn btn-sm btn-link text-decoration-none" t-on-click="openHistory">View All →</button>
+                        <h5 class="fw-bold mb-0">
+                            <i class="fa fa-history me-2 text-primary"/> Query Library &amp; Starred Reports
+                        </h5>
+                        <button class="btn btn-sm btn-link text-decoration-none" t-on-click="openHistory">View All History →</button>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">
                             <thead class="table-light">
                                 <tr>
+                                    <th style="width: 40px;"></th>
                                     <th>Query</th>
                                     <th>Target Model</th>
                                     <th>Chart Type</th>
+                                    <th>Metric</th>
                                     <th>Created On</th>
-                                    <th class="text-end">Action</th>
+                                    <th class="text-end">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <t t-foreach="state.recentQueries" t-as="rec" t-key="rec.id">
                                     <tr>
-                                        <td class="fw-medium"><t t-esc="rec.name"/></td>
+                                        <td>
+                                            <button class="btn btn-link p-0 text-warning" 
+                                                    t-on-click="(ev) => this.toggleFavorite(rec, ev)"
+                                                    title="Toggle Favorite">
+                                                <i t-attf-class="fa #{rec.is_favorite ? 'fa-star' : 'fa-star-o'}"/>
+                                            </button>
+                                        </td>
+                                        <td class="fw-medium">
+                                            <t t-esc="rec.name"/>
+                                            <div t-if="rec.ai_insight" class="text-muted extra-small text-truncate" style="max-width: 320px;" t-att-title="rec.ai_insight">
+                                                <i class="fa fa-lightbulb-o text-warning me-1"/> <t t-esc="rec.ai_insight"/>
+                                            </div>
+                                        </td>
                                         <td><code><t t-esc="rec.model_name"/></code></td>
                                         <td>
                                             <span class="badge bg-secondary-subtle text-secondary rounded-pill text-uppercase">
                                                 <t t-esc="rec.chart_type"/>
                                             </span>
                                         </td>
+                                        <td class="text-muted small"><t t-esc="rec.measure or '-'"/></td>
                                         <td class="text-muted small"><t t-esc="rec.create_date"/></td>
                                         <td class="text-end">
                                             <button class="btn btn-sm btn-primary rounded-pill px-3" t-on-click="() => this.runRecentQuery(rec)">
-                                                <i class="fa fa-play me-1"/> Re-run
+                                                <i class="fa fa-play me-1"/> Open Report
                                             </button>
                                         </td>
                                     </tr>

@@ -1,6 +1,6 @@
 // ==========================================
 // AI Chat-to-Report & Dashboard Assistant
-// Modern Styling for Odoo 20
+// Modern Marketplace-Grade Styling for Odoo 20
 // ==========================================
 
 .o_ai_chat_report_systray {
@@ -14,8 +14,27 @@
         cursor: pointer;
         
         &:hover {
-            transform: scale(1.2) rotate(5deg);
+            transform: scale(1.2) rotate(6deg);
         }
+    }
+
+    .o_ai_recording_pulse {
+        animation: pulseRecording 1.2s infinite;
+    }
+}
+
+@keyframes pulseRecording {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+    }
+    70% {
+        transform: scale(1.2);
+        box-shadow: 0 0 0 6px rgba(220, 53, 69, 0);
+    }
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
     }
 }
 
@@ -23,16 +42,16 @@
     position: absolute;
     top: 100%;
     right: 0;
-    width: 380px;
+    width: 410px;
     margin-top: 10px;
     z-index: 1055;
     background: rgba(255, 255, 255, 0.98);
-    backdrop-filter: blur(12px);
+    backdrop-filter: blur(14px);
     border: 1px solid rgba(0, 0, 0, 0.08);
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12), 0 5px 15px rgba(0, 0, 0, 0.04) !important;
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.14), 0 5px 15px rgba(0, 0, 0, 0.05) !important;
     
     .o_ai_suggestions {
-        max-height: 80px;
+        max-height: 85px;
         overflow-y: auto;
     }
 
@@ -46,10 +65,15 @@
         transition: all 0.2s ease;
 
         &:hover {
-            background: linear-gradient(135deg, rgba(113, 75, 103, 0.1), rgba(1, 126, 132, 0.1));
+            background: linear-gradient(135deg, rgba(113, 75, 103, 0.12), rgba(1, 126, 132, 0.12));
             color: #714B67;
             transform: translateY(-1px);
         }
+    }
+
+    .o_ai_insight_box {
+        background: linear-gradient(135deg, rgba(1, 126, 132, 0.06), rgba(113, 75, 103, 0.06));
+        border: 1px solid rgba(1, 126, 132, 0.15);
     }
     
     .o_ai_textarea {
@@ -65,6 +89,17 @@
             outline: none;
         }
     }
+
+    .o_ai_mic_btn {
+        transition: all 0.2s ease;
+        &:hover {
+            transform: scale(1.15);
+        }
+    }
+
+    .o_ai_recording_mic {
+        animation: pulseRecording 1.5s infinite;
+    }
     
     .btn-primary {
         background: linear-gradient(135deg, #714B67, #017E84);
@@ -75,6 +110,11 @@
             opacity: 0.92;
             transform: translateY(-1px);
         }
+    }
+
+    .btn-xs {
+        padding: 2px 8px;
+        font-size: 0.72rem;
     }
 
     .extra-small {
@@ -107,6 +147,10 @@
         box-shadow: 0 4px 12px rgba(113, 75, 103, 0.25);
     }
 
+    .o_ai_insight_card {
+        background: linear-gradient(135deg, rgba(1, 126, 132, 0.05), rgba(113, 75, 103, 0.05));
+    }
+
     .o_ai_query_card {
         background: #ffffff;
         border: 1px solid rgba(0, 0, 0, 0.06);
@@ -122,6 +166,13 @@
                 border-color: #714B67;
                 box-shadow: 0 0 0 0.3rem rgba(113, 75, 103, 0.15);
                 outline: none;
+            }
+        }
+
+        .o_ai_mic_btn_large {
+            transition: transform 0.2s ease;
+            &:hover {
+                transform: translateY(-50%) scale(1.15);
             }
         }
 

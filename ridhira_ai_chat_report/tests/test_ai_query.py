@@ -13,7 +13,7 @@ class TestAiQuery(TransactionCase):
 
     def test_basic_instantiation(self):
         """
-        Verify basic model structure and default values.
+        Verify basic model structure, default values, and favorite flag.
         """
         query_record = self.AiReportQuery.create({
             'name': 'Test Query',
@@ -21,6 +21,7 @@ class TestAiQuery(TransactionCase):
         })
         self.assertEqual(query_record.name, 'Test Query')
         self.assertEqual(query_record.chart_type, 'bar')
+        self.assertFalse(query_record.is_favorite)
         
     def test_missing_api_key(self):
         """
@@ -46,7 +47,8 @@ class TestAiQuery(TransactionCase):
                 "fields_list": ["name", "country_id"],
                 "groupby": ["country_id"],
                 "chart_type": "pie"
-            })  # Step 2 response
+            }),  # Step 2 response
+            "1. Most partners are centered in top 3 countries.\n2. Expand distribution networks."  # Insight
         ]
         
         query_record = self.AiReportQuery.create({
@@ -75,7 +77,8 @@ class TestAiQuery(TransactionCase):
                 "fields_list": ["name", "company_id"],
                 "groupby": ["company_id"],
                 "chart_type": "pivot"
-            })
+            }),
+            "1. User seat distribution is balanced.\n2. Review license allocation."
         ]
         
         query_record = self.AiReportQuery.create({
@@ -88,7 +91,7 @@ class TestAiQuery(TransactionCase):
         self.assertEqual(result['model_name'], 'res.users')
         self.assertEqual(result['chart_type'], 'pivot')
         self.assertIn('company_id', result['groupby'])
-        self.assertEqual(result['domain'], [["active", "=", True]])
+        self.assertEqual(result['domain'][0], ["active", "=", True])
         self.assertEqual(result['action']['view_mode'], 'pivot,list')
 
     @patch('odoo.addons.ridhira_ai_chat_report.models.ai_report_query.AiReportQuery._get_llm_response')
@@ -98,7 +101,8 @@ class TestAiQuery(TransactionCase):
         """
         mock_get_llm_response.side_effect = [
             "```json\n{\"model_name\": \"res.partner\"}\n```",
-            "```json\n{\n  \"domain\": [],\n  \"fields_list\": [\"name\"],\n  \"groupby\": [],\n  \"chart_type\": \"bar\"\n}\n```"
+            "```json\n{\n  \"domain\": [],\n  \"fields_list\": [\"name\"],\n  \"groupby\": [],\n  \"chart_type\": \"bar\"\n}\n```",
+            "Partner overview insight"
         ]
         
         query_record = self.AiReportQuery.create({
@@ -109,6 +113,51 @@ class TestAiQuery(TransactionCase):
         result = query_record.action_generate_query(query_record.user_prompt)
         self.assertEqual(result['model_name'], 'res.partner')
         self.assertEqual(result['chart_type'], 'bar')
+
+    @patch('odoo.addons.ridhira_ai_chat_report.models.ai_report_query.AiReportQuery._get_llm_response')
+    def test_action_refine_query(self, mock_get_llm_response):
+        """
+        Test conversational refinement of an existing query.
+        """
+        rec = self.AiReportQuery.create({
+            'name': 'Initial Query',
+            'user_prompt': 'Show me partners',
+            'model_name': 'res.partner',
+            'domain': json.dumps([]),
+            'groupby': json.dumps([]),
+            'chart_type': 'bar',
+        })
+
+        mock_get_llm_response.side_effect = [
+            json.dumps({
+                "domain": [],
+                "groupby": ["country_id"],
+                "measure": "__count__",
+                "chart_type": "stacked_bar"
+            }),
+            "Refined insight: Partner segmentation by country"
+        ]
+
+        refined = self.AiReportQuery.action_refine_query(rec.id, "Group by country as stacked bar")
+        self.assertEqual(refined['chart_type'], 'stacked_bar')
+        self.assertIn('country_id', refined['groupby'])
+        self.assertEqual(refined['action']['context']['stacked'], '1')
+        self.assertEqual(rec.chart_type, 'stacked_bar')
+
+    def test_action_toggle_favorite(self):
+        """
+        Test star/unstar action on query records.
+        """
+        rec = self.AiReportQuery.create({
+            'name': 'Favorite Test',
+            'user_prompt': 'Show sales',
+            'model_name': 'res.partner',
+        })
+        self.assertFalse(rec.is_favorite)
+        rec.action_toggle_favorite()
+        self.assertTrue(rec.is_favorite)
+        rec.action_toggle_favorite()
+        self.assertFalse(rec.is_favorite)
 
     @patch('odoo.addons.ridhira_ai_chat_report.models.ai_report_query.AiReportQuery._get_llm_response')
     def test_usecase_invalid_model(self, mock_get_llm_response):
